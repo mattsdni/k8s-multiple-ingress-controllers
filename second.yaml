@@ -1,0 +1,68 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ingress-nginx-gateway
+data:
+  use-proxy-protocol: "true"
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: ingress-nginx-gateway
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ingress-nginx-gateway
+        k8s-addon: ingress-nginx.addons.k8s.io
+    spec:
+      hostNetwork: true
+      terminationGracePeriodSeconds: 60
+      nodeSelector:
+        nginx: "new"
+      containers:
+      - image: infobloxcto/ngp.k8s-nginx-ingress:0.7.7-v0.7.1-12-g1d048c0-unsupported
+        name: ingress-nginx-gateway
+        imagePullPolicy: Always
+        ports:
+          - name: http
+            containerPort: 80
+            protocol: TCP
+          - name: https
+            containerPort: 443
+            protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 30
+          timeoutSeconds: 3
+        resources:
+          limits:
+            cpu: 1
+            memory: 2048Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        args:
+        - /nginx-ingress-controller
+        - --default-backend-service=$(POD_NAMESPACE)/nginx-default-backend
+        - --configmap=$(POD_NAMESPACE)/ingress-nginx
+        - --ingress-class=nginx-gateway
