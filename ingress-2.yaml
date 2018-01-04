@@ -1,0 +1,22 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    ingress.kubernetes.io/ingress.class: nginx-gateway
+    ingress.kubernetes.io/limit-rps: "3000"
+    ingress.kubernetes.io/proxy-read-timeout: "300"
+    ingress.kubernetes.io/secure-backends: "true"
+  name: ingress-2
+spec:
+  rules:
+  - host: echo.com
+    http:
+      paths:
+      - backend:
+          serviceName: echo
+          servicePort: 80
+        path: /
+      - backend:
+          serviceName: echo-svc
+          servicePort: 8000
+        path: /
